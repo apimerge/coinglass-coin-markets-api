@@ -118,6 +118,29 @@ curl -X POST "http://127.0.0.1:8000/markets" \
   -d '{"exchange":["Binance","Bybit"],"page":1}'
 ```
 
+## Error response
+
+If the Apify Actor finishes with a non-success status, the API returns run details and any dataset error items that were available.
+
+```json
+{
+  "detail": {
+    "message": "Actor run did not succeed.",
+    "actor": "api_merge/coinglass-coin-markets",
+    "runId": "abc123",
+    "status": "FAILED",
+    "statusMessage": "CoinGlass did not return usable data right now.",
+    "exitCode": 91,
+    "datasetId": "def456",
+    "input": {
+      "exchange": ["Binance", "Bybit"],
+      "page": 1
+    },
+    "datasetItems": []
+  }
+}
+```
+
 ## Input
 
 | Field | Required | Example | Description |

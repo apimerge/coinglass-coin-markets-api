@@ -151,6 +151,37 @@ def get_run_value(run: object, api_key: str, attr_name: str | None = None) -> ob
     return None
 
 
+def get_run_error_detail(
+    client: ApifyClient,
+    run: object,
+    run_input: dict[str, Any],
+) -> dict[str, Any]:
+    dataset_id = get_run_value(run, "defaultDatasetId", "default_dataset_id")
+    dataset_items: list[dict[str, Any]] = []
+
+    if dataset_id:
+        try:
+            dataset_items = list(client.dataset(str(dataset_id)).iterate_items())
+        except Exception:
+            dataset_items = []
+
+    detail: dict[str, Any] = {
+        "message": "Actor run did not succeed.",
+        "actor": ACTOR_ID,
+        "runId": get_run_value(run, "id"),
+        "status": get_run_value(run, "status"),
+        "statusMessage": get_run_value(run, "statusMessage", "status_message"),
+        "exitCode": get_run_value(run, "exitCode", "exit_code"),
+        "datasetId": dataset_id,
+        "input": run_input,
+    }
+
+    if dataset_items:
+        detail["datasetItems"] = dataset_items
+
+    return detail
+
+
 def fetch_markets(token: str, request: CoinMarketsRequest) -> dict[str, Any]:
     exchanges = split_exchange_values(request.exchange)
     page = request.page if request.page > 0 else 1
@@ -167,7 +198,7 @@ def fetch_markets(token: str, request: CoinMarketsRequest) -> dict[str, Any]:
         if run_status and run_status != "SUCCEEDED":
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
-                detail=f"Actor finished with status: {run_status}",
+                detail=get_run_error_detail(client, run, run_input),
             )
 
         dataset_id = get_run_value(run, "defaultDatasetId", "default_dataset_id")
@@ -234,4 +265,3 @@ async def post_markets(
     token: str = Depends(get_apify_token),
 ) -> dict[str, Any]:
     return await run_in_threadpool(fetch_markets, token, request)
-
